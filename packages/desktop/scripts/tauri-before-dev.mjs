@@ -66,9 +66,9 @@ const holdOpenUntilSignal = ({ uiChild } = {}) => {
   // Node 25+ may exit with a non-zero status when it detects an unsettled
   // top-level await. We avoid top-level await entirely and keep the event loop
   // alive with a timer until Tauri stops the dev process.
-  const timer = setInterval(() => {}, 60_000);
+  const timer = setInterval(() => { }, 60_000);
 
-   let stopping = false;
+  let stopping = false;
 
   const stop = () => {
     if (stopping) return;
@@ -125,10 +125,11 @@ const runPrepareSidecars = () => {
 };
 
 const runUiDevServer = () => {
-  const child = spawn(pnpmCmd, ["-w", "dev:ui"], {
+  const isWin = process.platform === "win32";
+  const child = spawn(isWin ? `${pnpmCmd} -w dev:ui` : pnpmCmd, isWin ? [] : ["-w", "dev:ui"], {
     stdio: "inherit",
-    shell: process.platform === "win32",
-    detached: process.platform !== "win32",
+    shell: isWin,
+    detached: !isWin,
     env: {
       ...process.env,
       // Make sure vite sees the intended port.
@@ -183,7 +184,7 @@ const main = async () => {
   if (portInUse) {
     console.error(
       `[openwork] Port ${port} is in use, but it does not look like a Vite dev server.\n` +
-        `Set PORT to a free port (e.g. PORT=5174) or stop the process using port ${port}.`
+      `Set PORT to a free port (e.g. PORT=5174) or stop the process using port ${port}.`
     );
     process.exit(1);
   }

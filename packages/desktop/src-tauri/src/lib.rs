@@ -44,7 +44,7 @@ use commands::skills::{
     install_skill_template, list_local_skills, read_local_skill, uninstall_skill, write_local_skill,
 };
 use commands::updater::updater_environment;
-use commands::window::set_window_decorations;
+use commands::window::{set_window_decorations, window_close, window_is_maximized, window_minimize, window_toggle_maximize};
 use commands::workspace::{
     workspace_add_authorized_root, workspace_bootstrap, workspace_create, workspace_create_remote,
     workspace_export_config, workspace_forget, workspace_import_config, workspace_openwork_read,
@@ -150,8 +150,19 @@ pub fn run() {
             opencode_mcp_auth,
             scheduler_list_jobs,
             scheduler_delete_job,
-            set_window_decorations
+            set_window_decorations,
+            window_close,
+            window_minimize,
+            window_toggle_maximize,
+            window_is_maximized
         ])
+        .setup(|app| {
+            // Hide native title bar for custom title bar
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_decorations(false);
+            }
+            Ok(())
+        })
         .build(tauri::generate_context!())
         .expect("error while building OpenWork");
 
