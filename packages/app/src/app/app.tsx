@@ -34,6 +34,10 @@ import CreateRemoteWorkspaceModal from "./components/create-remote-workspace-mod
 import CreateWorkspaceModal from "./components/create-workspace-modal";
 import RenameWorkspaceModal from "./components/rename-workspace-modal";
 import McpAuthModal from "./components/mcp-auth-modal";
+import LanguageChangeToast from "./components/language-change-toast";
+import ModelVariantModal from "./components/model-variant-modal";
+import ToastContainer from "./components/toast-container";
+import { toast } from "./state/toast";
 import OnboardingView from "./pages/onboarding";
 import DashboardView from "./pages/dashboard";
 import SessionView from "./pages/session";
@@ -135,6 +139,7 @@ import { createSessionStore } from "./context/session";
 import { createExtensionsStore } from "./context/extensions";
 import { useGlobalSync } from "./context/global-sync";
 import { createWorkspaceStore } from "./context/workspace";
+import TitleBar from "./components/title-bar";
 import {
   updaterEnvironment,
   readOpencodeConfig,
@@ -791,7 +796,7 @@ export default function App() {
     if (typeof window === "undefined") return;
     if (!isTauriRuntime()) return;
 
-    const applyAndPersistFontZoom = (value: number) => {
+    const applyAndPersistFontZoom = (value: number, showToast = false) => {
       const next = normalizeFontZoom(value);
       persistFontZoom(window.localStorage, next);
 
@@ -808,21 +813,25 @@ export default function App() {
         applyFontZoom(document.documentElement.style, next);
       }
 
+      if (showToast) {
+        toast.info(`Font zoom: ${Math.round(next * 100)}%`, 1500);
+      }
+
       return next;
     };
 
-    let fontZoom = applyAndPersistFontZoom(readStoredFontZoom(window.localStorage) ?? 1);
+    let fontZoom = applyAndPersistFontZoom(readStoredFontZoom(window.localStorage) ?? 1, false);
 
     const handleZoomShortcut = (event: KeyboardEvent) => {
       const action = parseFontZoomShortcut(event);
       if (!action) return;
 
       if (action === "in") {
-        fontZoom = applyAndPersistFontZoom(fontZoom + FONT_ZOOM_STEP);
+        fontZoom = applyAndPersistFontZoom(fontZoom + FONT_ZOOM_STEP, true);
       } else if (action === "out") {
-        fontZoom = applyAndPersistFontZoom(fontZoom - FONT_ZOOM_STEP);
+        fontZoom = applyAndPersistFontZoom(fontZoom - FONT_ZOOM_STEP, true);
       } else {
-        fontZoom = applyAndPersistFontZoom(1);
+        fontZoom = applyAndPersistFontZoom(1, true);
       }
 
       event.preventDefault();
@@ -1788,6 +1797,7 @@ export default function App() {
     
     await renameSession(sessionID, trimmed);
     await refreshSidebarWorkspaceSessions(workspaceStore.activeWorkspaceId()).catch(() => undefined);
+    toast.success(`Session renamed to "${trimmed}"`);
   }
 
   async function deleteSessionById(sessionID: string) {
@@ -1822,6 +1832,8 @@ export default function App() {
     } catch {
       // ignore
     }
+
+    toast.success("Session deleted");
 
     // If the deleted session was selected, clear selection so routing can fall back cleanly.
     if (selectedSessionId() === trimmed) {
@@ -2003,6 +2015,7 @@ export default function App() {
       });
       const updated = unwrap(await c.provider.list());
       globalSync.set("provider", updated);
+      toast.success(`API key for ${providerId} saved`);
       return `Connected ${providerId}`;
     } catch (error) {
       const message = describeProviderError(error, "Failed to save API key");
@@ -2117,6 +2130,12 @@ export default function App() {
   // MCP OAuth modal state
   const [mcpAuthModalOpen, setMcpAuthModalOpen] = createSignal(false);
   const [mcpAuthEntry, setMcpAuthEntry] = createSignal<(typeof MCP_QUICK_CONNECT)[number] | null>(null);
+
+  // Model variant modal state
+  const [modelVariantModalOpen, setModelVariantModalOpen] = createSignal(false);
+
+  // Language change toast state
+  const [showLanguageChangeToast, setShowLanguageChangeToast] = createSignal(false);
 
   const extensionsStore = createExtensionsStore({
     client,
@@ -3322,7 +3341,13 @@ export default function App() {
       setOpenworkServerStatus(result.status);
       setOpenworkServerCapabilities(result.capabilities);
       setOpenworkServerCheckedAt(Date.now());
-      return result.status === "connected" || result.status === "limited";
+      const ok = result.status === "connected" || result.status === "limited";
+      if (ok) {
+        toast.success(`Reconnected to OpenWork server: ${url}`);
+      } else {
+        toast.error(`Failed to connect to ${url} (Status: ${result.status})`);
+      }
+      return ok;
     } finally {
       setOpenworkReconnectBusy(false);
     }
@@ -3340,7 +3365,13 @@ export default function App() {
       return false;
     }
 
-    return workspaceStore.startHost({ workspacePath, navigate: false });
+    const result = await workspaceStore.startHost({ workspacePath, navigate: false });
+    if (result) {
+      toast.success("Local server restarted successfully.");
+    } else {
+      toast.error("Failed to restart local server.");
+    }
+    return result;
   };
 
   const openWorkspaceConnectionSettings = (workspaceId: string) => {
@@ -3645,12 +3676,6 @@ export default function App() {
     }
 
     if (!isTauriRuntime()) {
-      setScheduledJobs([]);
-      setScheduledJobsStatus(null);
-      return;
-    }
-
-    if (isWindowsPlatform()) {
       setScheduledJobs([]);
       setScheduledJobsStatus(null);
       return;
@@ -4531,6 +4556,8 @@ export default function App() {
         setMcpStatus(tr("mcp.connected"));
       }
 
+      toast.success(`MCP server "${entry.name}" connected`);
+
       await refreshMcpServers();
       finishPerf(developerMode(), "mcp.connect", "done", startedAt, {
         name: entry.name,
@@ -4538,7 +4565,9 @@ export default function App() {
         slug,
       });
     } catch (e) {
-      setMcpStatus(e instanceof Error ? e.message : tr("mcp.connect_failed"));
+      const msg = e instanceof Error ? e.message : tr("mcp.connect_failed");
+      setMcpStatus(msg);
+      toast.error(`Failed to connect MCP "${entry.name}": ${msg}`);
       finishPerf(developerMode(), "mcp.connect", "error", startedAt, {
         name: entry.name,
         type: entryType,
@@ -4677,8 +4706,11 @@ export default function App() {
         setSelectedMcp(null);
       }
       setMcpStatus(null);
+      toast.success(`MCP server "${name}" removed`);
     } catch (e) {
-      setMcpStatus(e instanceof Error ? e.message : tr("mcp.remove_failed"));
+      const msg = e instanceof Error ? e.message : tr("mcp.remove_failed");
+      setMcpStatus(msg);
+      toast.error(msg);
     }
   }
 
@@ -5713,6 +5745,8 @@ export default function App() {
       submitProviderApiKey,
       view: currentView(),
       setView,
+      onboardingStep: onboardingStep(),
+      workspaceSwitchOpen: workspaceSwitchOpen(),
       startupPreference: startupPreference(),
       baseUrl: baseUrl(),
       clientConnected: Boolean(client()),
@@ -5837,15 +5871,31 @@ export default function App() {
       defaultModelRef: formatModelRef(defaultModel()),
       openDefaultModelPicker,
       showThinking: showThinking(),
-      toggleShowThinking: () => setShowThinking((v) => !v),
+      toggleShowThinking: () => {
+        const next = !showThinking();
+        setShowThinking(next);
+        toast.info(`Reasoning thinking ${next ? "enabled" : "disabled"}`, 2000);
+      },
       autoCompactContext: autoCompactContext(),
-      toggleAutoCompactContext: () => setAutoCompactContext((v) => !v),
+      toggleAutoCompactContext: () => {
+        const next = !autoCompactContext();
+        setAutoCompactContext(next);
+        toast.info(`Auto-compact context ${next ? "enabled" : "disabled"}`, 2000);
+      },
       hideTitlebar: hideTitlebar(),
-      toggleHideTitlebar: () => setHideTitlebar((v) => !v),
+      toggleHideTitlebar: () => {
+        const next = !hideTitlebar();
+        setHideTitlebar(next);
+        toast.info(`Title bar ${next ? "hidden" : "visible"}`, 2000);
+      },
       modelVariantLabel: formatModelVariantLabel(modelVariant()),
       editModelVariant: handleEditModelVariant,
       updateAutoCheck: updateAutoCheck(),
-      toggleUpdateAutoCheck: () => setUpdateAutoCheck((v) => !v),
+      toggleUpdateAutoCheck: () => {
+        const next = !updateAutoCheck();
+        setUpdateAutoCheck(next);
+        toast.info(`Automatic update checks ${next ? "enabled" : "disabled"}`, 2000);
+      },
       updateAutoDownload: updateAutoDownload(),
       toggleUpdateAutoDownload: () =>
         setUpdateAutoDownload((v) => {
@@ -5869,7 +5919,11 @@ export default function App() {
       engineRuntime: engineRuntime(),
       setEngineRuntime,
       isWindows: isWindowsPlatform(),
-      toggleDeveloperMode: () => setDeveloperMode((v) => !v),
+      toggleDeveloperMode: () => {
+        const next = !developerMode();
+        setDeveloperMode(next);
+        toast.warning(`Developer mode ${next ? "enabled" : "disabled"}`, 3000);
+      },
       developerMode: developerMode(),
       stopHost,
       restartLocalServer,
@@ -6185,6 +6239,7 @@ export default function App() {
 
   return (
     <>
+      <TitleBar title={tr("app.title")} />
       <Switch>
         <Match when={currentView() === "proto"}>
           <Switch>
@@ -6407,6 +6462,25 @@ export default function App() {
         subtitle={tr("dashboard.edit_remote_workspace_subtitle")}
         confirmLabel={tr("dashboard.edit_remote_workspace_confirm")}
       />
+
+      <LanguageChangeToast
+        open={showLanguageChangeToast()}
+        currentLanguage={currentLocale()}
+        onRestart={() => void relaunch()}
+        onDismiss={() => setShowLanguageChangeToast(false)}
+      />
+
+      <ModelVariantModal
+        open={modelVariantModalOpen()}
+        onClose={() => setModelVariantModalOpen(false)}
+        value={settings.modelVariant ?? null}
+        onSelect={(value) => {
+          setSettings("modelVariant", value);
+          toast.success(`${tr("settings.model_variant_label")} updated to ${value}`);
+        }}
+      />
+
+      <ToastContainer />
     </>
   );
 }

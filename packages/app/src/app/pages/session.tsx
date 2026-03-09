@@ -3376,7 +3376,7 @@ export default function SessionView(props: SessionViewProps) {
   };
 
   return (
-    <div class="flex h-screen w-full bg-dls-sidebar text-gray-12 font-sans overflow-hidden">
+    <div class="flex h-[calc(100vh-36px)] w-full bg-gray-1 text-gray-12 font-sans overflow-hidden">
       <aside class="w-[260px] hidden lg:flex flex-col bg-dls-sidebar border-r border-gray-6/70 p-3 pt-5">
         <div class="flex-1 overflow-y-auto">
           <Show when={showUpdatePill()}>
@@ -3430,6 +3430,8 @@ export default function SessionView(props: SessionViewProps) {
             onOpenCreateWorkspace={props.openCreateWorkspace}
             onOpenCreateRemoteWorkspace={props.openCreateRemoteWorkspace}
             onImportWorkspaceConfig={props.importWorkspaceConfig}
+            onRenameSession={props.renameSession}
+            onDeleteSession={props.deleteSession}
           />
         </div>
 

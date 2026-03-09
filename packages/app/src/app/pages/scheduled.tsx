@@ -445,14 +445,13 @@ export default function ScheduledTasksView(props: ScheduledTasksViewProps) {
     if (props.source === "remote") return props.sourceReady;
     return (
       isTauriRuntime() &&
-      !props.isWindows &&
       props.schedulerInstalled &&
       !schedulerInstallRequested()
     );
   });
   const schedulerGateActive = createMemo(() => {
     if (props.source !== "local") return false;
-    if (!isTauriRuntime() || props.isWindows) return false;
+    if (!isTauriRuntime()) return false;
     return !props.schedulerInstalled || schedulerInstallRequested();
   });
   const schedulerGateMode = createMemo(() => (props.schedulerInstalled ? "reload" : "install"));
@@ -462,7 +461,6 @@ export default function ScheduledTasksView(props: ScheduledTasksViewProps) {
       return props.sourceReady ? null : tr("scheduled.server_unavailable");
     }
     if (!isTauriRuntime()) return tr("scheduled.desktop_required");
-    if (props.isWindows) return tr("scheduled.windows_unsupported");
     if (!props.schedulerInstalled || schedulerInstallRequested()) return null;
     return null;
   });
@@ -745,7 +743,7 @@ export default function ScheduledTasksView(props: ScheduledTasksViewProps) {
       </Show>
 
       <Show when={props.status}>
-        <div class="rounded-xl border border-red-7/40 bg-red-3/60 px-5 py-4 text-sm text-red-11">
+        <div class="rounded-xl border border-red-7/40 bg-red-3/60 px-5 py-4 text-sm text-red-11 break-words whitespace-normal overflow-hidden">
           {props.status}
         </div>
       </Show>

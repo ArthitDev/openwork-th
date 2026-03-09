@@ -33,6 +33,8 @@ type Props = {
   onOpenCreateWorkspace: () => void;
   onOpenCreateRemoteWorkspace: () => void;
   onImportWorkspaceConfig: () => void;
+  onRenameSession?: (sessionId: string, newTitle: string) => Promise<void> | void;
+  onDeleteSession?: (sessionId: string) => Promise<void> | void;
 };
 
 const MAX_SESSIONS_PREVIEW = 6;
@@ -68,9 +70,13 @@ export default function WorkspaceSessionList(props: Props) {
   const [expandedWorkspaceIds, setExpandedWorkspaceIds] = createSignal<Set<string>>(new Set());
   const [previewCountByWorkspaceId, setPreviewCountByWorkspaceId] = createSignal<Record<string, number>>({});
   const [workspaceMenuId, setWorkspaceMenuId] = createSignal<string | null>(null);
+  const [sessionMenuId, setSessionMenuId] = createSignal<string | null>(null);
   const [addWorkspaceMenuOpen, setAddWorkspaceMenuOpen] = createSignal(false);
+  const [renamingSessionId, setRenamingSessionId] = createSignal<string | null>(null);
+  const [renameValue, setRenameValue] = createSignal("");
   let workspaceMenuRef: HTMLDivElement | undefined;
   let addWorkspaceMenuRef: HTMLDivElement | undefined;
+  const sessionMenuRefs = new Map<string, HTMLDivElement>();
 
   const isWorkspaceExpanded = (workspaceId: string) => expandedWorkspaceIds().has(workspaceId);
 
@@ -210,10 +216,10 @@ export default function WorkspaceSessionList(props: Props) {
                       </Show>
                     </button>
 
-                    <div class="min-w-0 flex-1">
+                    <div class="min-w-0 flex-1 overflow-hidden">
                       <div class="text-[14px] font-medium truncate">{workspaceLabel(workspace())}</div>
-                      <div class="text-[11px] text-gray-10 flex items-center gap-1.5">
-                        <span>{workspaceKindLabel(workspace())}</span>
+                      <div class="text-[11px] text-gray-10 flex items-center gap-1.5 truncate">
+                        <span class="truncate">{workspaceKindLabel(workspace())}</span>
                         <Show when={soulEnabled()}>
                           <span class="inline-flex items-center gap-1 rounded-full border border-ruby-7 bg-ruby-3 px-1.5 py-0.5 text-[10px] text-ruby-11">
                             <HeartPulse size={10} />
@@ -423,7 +429,7 @@ export default function WorkspaceSessionList(props: Props) {
                           fallback={
                             <Show when={group.status === "error"}>
                               <div
-                                class={`w-full px-3 py-2 text-xs ml-2 text-left rounded-lg border ${
+                                class={`w-[calc(100%-0.5rem)] px-3 py-2 text-[10px] ml-2 text-left rounded-lg border truncate ${
                                   taskLoadError().tone === "offline"
                                     ? "text-amber-11 bg-amber-3 border-amber-7"
                                     : "text-red-11 bg-red-3 border-red-7"
@@ -439,31 +445,103 @@ export default function WorkspaceSessionList(props: Props) {
                             {(session) => {
                               const isSelected = () => props.selectedSessionId === session.id;
                               const isSessionActive = () => (props.sessionStatusById?.[session.id] ?? "idle") !== "idle";
+                              const isMenuOpen = () => sessionMenuId() === session.id;
+                              const isRenaming = () => renamingSessionId() === session.id;
                               return (
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  class={`group flex items-center justify-between min-h-9 px-3 rounded-lg cursor-pointer relative overflow-hidden ml-2 w-[calc(100%-0.5rem)] ${
-                                    isSelected() ? "bg-gray-4/90 text-gray-12" : "hover:bg-gray-3/70"
-                                  }`}
-                                  onClick={() => props.onOpenSession(workspace().id, session.id)}
-                                  onKeyDown={(event) => {
-                                    if (event.key !== "Enter" && event.key !== " ") return;
-                                    if (event.isComposing || event.keyCode === 229) return;
-                                    event.preventDefault();
-                                    props.onOpenSession(workspace().id, session.id);
-                                  }}
-                                >
-                                  <div class="flex min-w-0 items-center gap-1.5 mr-2">
-                                    <Show when={isSessionActive()}>
-                                      <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-9" />
-                                    </Show>
-                                    <span class="text-[13px] text-gray-11 truncate font-medium">{session.title}</span>
-                                  </div>
-                                  <Show when={session.time?.updated}>
-                                    <span class="text-[11px] text-gray-9 whitespace-nowrap group-hover:text-gray-10 transition-colors">
-                                      {formatRelativeTime(session.time?.updated ?? Date.now())}
-                                    </span>
+                                <div class="relative ml-2 w-[calc(100%-0.5rem)]">
+                                  <Show when={isRenaming()}>
+                                    <div class="flex items-center gap-1 min-h-9 px-2 rounded-lg bg-gray-4/90">
+                                      <input
+                                        type="text"
+                                        value={renameValue()}
+                                        onInput={(e) => setRenameValue(e.currentTarget.value)}
+                                        onKeyDown={async (e) => {
+                                          if (e.key === "Enter") {
+                                            if (props.onRenameSession && renameValue().trim()) {
+                                              await props.onRenameSession(session.id, renameValue().trim());
+                                            }
+                                            setRenamingSessionId(null);
+                                          } else if (e.key === "Escape") {
+                                            setRenamingSessionId(null);
+                                          }
+                                        }}
+                                        onBlur={() => setRenamingSessionId(null)}
+                                        class="flex-1 bg-transparent text-[13px] text-gray-12 outline-none"
+                                        autofocus
+                                      />
+                                    </div>
+                                  </Show>
+                                  <Show when={!isRenaming()}>
+                                    <div
+                                      role="button"
+                                      tabIndex={0}
+                                      class={`group flex items-center justify-between min-h-9 px-3 rounded-lg cursor-pointer relative overflow-hidden ${
+                                        isSelected() ? "bg-gray-4/90 text-gray-12" : "hover:bg-gray-3/70"
+                                      }`}
+                                      onClick={() => props.onOpenSession(workspace().id, session.id)}
+                                      onKeyDown={(event) => {
+                                        if (event.key !== "Enter" && event.key !== " ") return;
+                                        if (event.isComposing || event.keyCode === 229) return;
+                                        event.preventDefault();
+                                        props.onOpenSession(workspace().id, session.id);
+                                      }}
+                                    >
+                                      <div class="flex min-w-0 items-center gap-1.5 mr-2">
+                                        <Show when={isSessionActive()}>
+                                          <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-9" />
+                                        </Show>
+                                        <span class="text-[13px] text-gray-11 truncate font-medium">{session.title}</span>
+                                      </div>
+                                      <div class="flex items-center gap-1">
+                                        <Show when={session.time?.updated}>
+                                          <span class="text-[11px] text-gray-9 whitespace-nowrap group-hover:text-gray-10 transition-colors">
+                                            {formatRelativeTime(session.time?.updated ?? Date.now())}
+                                          </span>
+                                        </Show>
+                                        <button
+                                          type="button"
+                                          class="p-1 rounded-md text-gray-9 hover:text-gray-11 hover:bg-gray-4/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            setSessionMenuId((current) => current === session.id ? null : session.id);
+                                          }}
+                                          aria-label="Session actions"
+                                        >
+                                          <MoreHorizontal size={14} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </Show>
+                                  <Show when={isMenuOpen() && !isRenaming()}>
+                                    <div
+                                      ref={(el) => { if (el) sessionMenuRefs.set(session.id, el); }}
+                                      class="absolute right-0 top-full mt-1 z-50 w-44 rounded-lg border border-gray-6 bg-gray-1 shadow-lg p-1"
+                                      onClick={(event) => event.stopPropagation()}
+                                    >
+                                      <button
+                                        type="button"
+                                        class="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-3"
+                                        onClick={() => {
+                                          setRenameValue(session.title);
+                                          setRenamingSessionId(session.id);
+                                          setSessionMenuId(null);
+                                        }}
+                                      >
+                                        {tr("session.rename_session")}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        class="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-gray-3 text-red-11"
+                                        onClick={async () => {
+                                          setSessionMenuId(null);
+                                          if (props.onDeleteSession) {
+                                            await props.onDeleteSession(session.id);
+                                          }
+                                        }}
+                                      >
+                                        {tr("session.delete_session")}
+                                      </button>
+                                    </div>
                                   </Show>
                                 </div>
                               );

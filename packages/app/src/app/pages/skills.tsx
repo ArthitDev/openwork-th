@@ -635,7 +635,7 @@ export default function SkillsView(props: SkillsViewProps) {
                   }}
                 >
                   <div class="flex gap-4 min-w-0">
-                    <div class="w-10 h-10 rounded-lg flex items-center justify-center shadow-sm border border-dls-border bg-dls-surface">
+                    <div class="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center shadow-sm border border-dls-border bg-dls-surface">
                       <Package size={20} class="text-dls-secondary" />
                     </div>
                     <div class="min-w-0">
@@ -746,7 +746,7 @@ export default function SkillsView(props: SkillsViewProps) {
               {(skill) => (
                 <div class="bg-dls-surface border border-dls-border rounded-xl p-4 flex items-start justify-between gap-4 group hover:border-dls-border hover:bg-dls-hover transition-all text-left">
                   <div class="flex gap-4 min-w-0">
-                    <div class="w-10 h-10 rounded-lg flex items-center justify-center shadow-sm border border-dls-border bg-dls-surface">
+                    <div class="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center shadow-sm border border-dls-border bg-dls-surface">
                       <Package size={20} class="text-dls-secondary" />
                     </div>
                     <div class="min-w-0">

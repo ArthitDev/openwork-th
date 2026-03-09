@@ -4,6 +4,7 @@ import type {
   McpServerEntry,
   McpStatusMap,
   OpencodeConnectStatus,
+  OnboardingStep,
   PluginScope,
   ProviderListItem,
   SettingsTab,
@@ -95,6 +96,8 @@ export type DashboardViewProps = {
   submitProviderApiKey: (providerId: string, apiKey: string) => Promise<string | void>;
   view: View;
   setView: (view: View, sessionId?: string) => void;
+  onboardingStep: OnboardingStep;
+  workspaceSwitchOpen: boolean;
   startupPreference: StartupPreference | null;
   baseUrl: string;
   clientConnected: boolean;
@@ -1052,7 +1055,7 @@ export default function DashboardView(props: DashboardViewProps) {
   };
 
   return (
-    <div class="flex h-screen w-full bg-dls-surface text-dls-text font-sans overflow-hidden">
+    <div class="flex flex-1 w-full bg-dls-surface text-dls-text font-sans overflow-hidden">
       <aside class="w-64 hidden md:flex flex-col bg-dls-sidebar border-r border-dls-border p-4">
         <div class="flex-1 overflow-y-auto">
           <Show when={showUpdatePill()}>
@@ -1157,6 +1160,16 @@ export default function DashboardView(props: DashboardViewProps) {
             <Show when={props.busyHint}>
               <span class="text-xs text-dls-secondary">{props.busyHint}</span>
             </Show>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-11 hover:text-gray-12 hover:bg-gray-3 transition-colors"
+              onClick={() => props.setView("session")}
+            >
+              <ArrowLeft size={16} />
+              {translate("common.back")}
+            </button>
           </div>
         </header>
 
@@ -1479,18 +1492,20 @@ export default function DashboardView(props: DashboardViewProps) {
         />
         </div>
 
-        <StatusBar
-          clientConnected={props.clientConnected}
-          openworkServerStatus={props.openworkServerStatus}
-          startupPreference={props.startupPreference}
-          developerMode={props.developerMode}
-          onOpenSettings={() => openSettings("general")}
-          onOpenMessaging={openConfig}
-          onOpenProviders={() => props.openProviderAuthModal()}
-          onOpenMcp={() => props.setTab("mcp")}
-          providerConnectedIds={props.providerConnectedIds}
-          mcpStatuses={props.mcpStatuses}
-        />
+        <Show when={props.view !== "onboarding" && props.onboardingStep !== "connecting" && !props.workspaceSwitchOpen}>
+          <StatusBar
+            clientConnected={props.clientConnected}
+            openworkServerStatus={props.openworkServerStatus}
+            startupPreference={props.startupPreference}
+            developerMode={props.developerMode}
+            onOpenSettings={() => openSettings("general")}
+            onOpenMessaging={openConfig}
+            onOpenProviders={() => props.openProviderAuthModal()}
+            onOpenMcp={() => props.setTab("mcp")}
+            providerConnectedIds={props.providerConnectedIds}
+            mcpStatuses={props.mcpStatuses}
+          />
+        </Show>
         <nav class="md:hidden border-t border-dls-border bg-dls-surface">
           <div class={`mx-auto max-w-5xl px-4 py-3 grid gap-2 ${props.developerMode ? "grid-cols-6" : "grid-cols-5"}`}>
             <button

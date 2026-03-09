@@ -313,12 +313,12 @@ export function isSandboxWorkspace(workspace: WorkspaceInfo) {
 
 export function getWorkspaceTaskLoadErrorDisplay(workspace: WorkspaceInfo, error?: string | null) {
   const raw = error?.trim() ?? "";
-  const fallbackTitle = raw || "Failed to load tasks";
+  const fallbackTitle = raw || "Load failed";
   if (!raw || !isSandboxWorkspace(workspace)) {
     return {
       tone: "error" as const,
       label: "Error",
-      message: "Failed to load tasks",
+      message: "Load failed",
       title: fallbackTitle,
     };
   }
@@ -333,7 +333,7 @@ export function getWorkspaceTaskLoadErrorDisplay(workspace: WorkspaceInfo, error
     return {
       tone: "error" as const,
       label: "Error",
-      message: "Failed to load tasks",
+      message: "Load failed",
       title: fallbackTitle,
     };
   }

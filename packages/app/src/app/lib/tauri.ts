@@ -947,3 +947,20 @@ export async function opencodeRouterRestart(options: {
 export async function setWindowDecorations(decorations: boolean): Promise<void> {
   return invoke<void>("set_window_decorations", { decorations });
 }
+
+// Window control functions for custom title bar
+export async function windowClose(): Promise<void> {
+  return invoke<void>("window_close");
+}
+
+export async function windowMinimize(): Promise<void> {
+  return invoke<void>("window_minimize");
+}
+
+export async function windowToggleMaximize(): Promise<void> {
+  return invoke<void>("window_toggle_maximize");
+}
+
+export async function windowIsMaximized(): Promise<boolean> {
+  return invoke<boolean>("window_is_maximized");
+}
