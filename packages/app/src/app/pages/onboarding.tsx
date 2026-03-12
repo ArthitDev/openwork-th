@@ -110,7 +110,7 @@ export default function OnboardingView(props: OnboardingViewProps) {
   return (
     <Switch>
       <Match when={props.onboardingStep === "connecting"}>
-        <div class="min-h-screen flex flex-col items-center justify-center bg-gray-1 text-gray-12 p-6 relative overflow-hidden">
+        <div class="min-h-screen flex flex-col items-center justify-center bg-gray-1 text-gray-12 p-6 relative overflow-hidden scrollbar-hide">
           <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gray-2 via-gray-1 to-gray-1 opacity-50" />
           <div class="z-10 flex flex-col items-center gap-6">
             <div class="relative">
@@ -152,7 +152,7 @@ export default function OnboardingView(props: OnboardingViewProps) {
       </Match>
 
       <Match when={props.onboardingStep === "local"}>
-        <div class="min-h-screen flex flex-col items-center justify-center bg-gray-1 text-gray-12 p-6 relative">
+        <div class="min-h-screen flex flex-col items-center justify-center bg-gray-1 text-gray-12 p-6 relative scrollbar-hide">
           <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-gray-2 to-transparent opacity-20 pointer-events-none" />
 
           <div class="max-w-lg w-full z-10 space-y-6">
@@ -492,7 +492,7 @@ export default function OnboardingView(props: OnboardingViewProps) {
       </Match>
 
       <Match when={props.onboardingStep === "server"}>
-        <div class="min-h-screen flex flex-col items-center justify-center bg-gray-1 text-gray-12 p-6 relative">
+        <div class="min-h-screen flex flex-col items-center justify-center bg-gray-1 text-gray-12 p-6 relative scrollbar-hide">
           <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-gray-2 to-transparent opacity-20 pointer-events-none" />
 
           <div class="max-w-md w-full z-10 space-y-8">
@@ -585,7 +585,7 @@ export default function OnboardingView(props: OnboardingViewProps) {
       </Match>
 
       <Match when={true}>
-        <div class="min-h-screen flex flex-col items-center justify-center bg-gray-1 text-gray-12 p-6 relative">
+        <div class="min-h-screen flex flex-col items-center justify-center bg-gray-1 text-gray-12 p-6 relative scrollbar-hide">
           <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-gray-2 to-transparent opacity-20 pointer-events-none" />
 
           <div class="max-w-xl w-full z-10 space-y-12">

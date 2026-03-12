@@ -1,6 +1,6 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
-import { Boxes, Check, Copy, Download, Eye, EyeOff, FolderCode, Key, Link as LinkIcon, X } from "lucide-solid";
+import { Bot, Boxes, Check, Copy, Download, Eye, EyeOff, FolderCode, Key, Link as LinkIcon, X } from "lucide-solid";
 import { currentLocale, t } from "../../i18n";
 
 const translate = (key: string) => t(key, currentLocale());
@@ -370,8 +370,8 @@ export default function ShareWorkspaceModal(props: {
                 <div class="pt-2">
                   <div class="flex items-center justify-between p-3 bg-gray-2 rounded-2xl group hover:bg-gray-3 transition-all border border-gray-6">
                     <div class="flex items-center gap-3">
-                      <div class="p-2 bg-gray-1 rounded-lg text-gray-9 shadow-sm border border-gray-6 relative overflow-hidden flex items-center justify-center font-bold font-mono">
-                        B
+                      <div class="p-2 bg-gray-1 rounded-lg text-gray-9 shadow-sm border border-gray-6 relative overflow-hidden flex items-center justify-center">
+                        <Bot size={18} />
                         <div class="absolute inset-0 bg-amber-400 opacity-20"></div>
                       </div>
                       <div>

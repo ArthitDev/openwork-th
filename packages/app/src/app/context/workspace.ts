@@ -940,24 +940,25 @@ export function createWorkspaceStore(options: {
         return true;
       }
 
-    const wasLocalConnection = options.startupPreference() === "local" && options.client();
-    options.setStartupPreference("local");
-    const nextRoot = isRemote ? next.directory?.trim() ?? "" : next.path;
-    const oldWorkspacePath = projectDir();
-    const workspaceChanged = oldWorkspacePath !== nextRoot;
+      // Local workspace handling
+      const wasLocalConnection = options.startupPreference() === "local" && options.client();
+      options.setStartupPreference("local");
+      const nextRoot = isRemote ? next.directory?.trim() ?? "" : next.path;
+      const oldWorkspacePath = projectDir();
+      const workspaceChanged = oldWorkspacePath !== nextRoot;
 
-    wsDebug("activate:local:prep", {
-      id,
-      nextRoot,
-      workspaceChanged,
-      wasLocalConnection: Boolean(wasLocalConnection),
-      prevProjectDir: oldWorkspacePath,
-    });
+      wsDebug("activate:local:prep", {
+        id,
+        nextRoot,
+        workspaceChanged,
+        wasLocalConnection: Boolean(wasLocalConnection),
+        prevProjectDir: oldWorkspacePath,
+      });
 
-    syncActiveWorkspaceId(id);
-    setProjectDir(nextRoot);
+      syncActiveWorkspaceId(id);
+      setProjectDir(nextRoot);
 
-    if (isTauriRuntime()) {
+      if (isTauriRuntime()) {
       if (isRemote) {
         setWorkspaceConfig(null);
         setWorkspaceConfigLoaded(true);
@@ -987,124 +988,124 @@ export function createWorkspaceStore(options: {
       } catch {
         // ignore
       }
-    } else if (!isRemote) {
-      if (!authorizedDirs().includes(next.path)) {
-        const merged = authorizedDirs().length ? authorizedDirs().slice() : [];
-        if (!merged.includes(next.path)) merged.push(next.path);
-        setAuthorizedDirs(merged);
+      } else if (!isRemote) {
+        if (!authorizedDirs().includes(next.path)) {
+          const merged = authorizedDirs().length ? authorizedDirs().slice() : [];
+          if (!merged.includes(next.path)) merged.push(next.path);
+          setAuthorizedDirs(merged);
+        }
+      } else {
+        setAuthorizedDirs([]);
       }
-    } else {
-      setAuthorizedDirs([]);
-    }
 
-    // If we were previously connected to a remote engine, switching back to a local workspace
-    // requires starting (or reconnecting) the local host engine.
-    //
-    // Without this, we end up keeping the remote client while `startupPreference` flips to
-    // "local", and subsequent session/file actions behave inconsistently.
-    if (!isRemote && options.client() && !wasLocalConnection) {
-      wsDebug("activate:remote->local:reconnect", {
-        id,
-        nextPath: next.path,
-        engine: engine()?.baseUrl ?? null,
-        engineRunning: Boolean(engine()?.running),
-      });
-      options.setSelectedSessionId(null);
-      options.setMessages([]);
-      options.setTodos([]);
-      options.setPendingPermissions([]);
-      options.setSessionStatusById({});
+      // If we were previously connected to a remote engine, switching back to a local workspace
+      // requires starting (or reconnecting) the local host engine.
+      //
+      // Without this, we end up keeping the remote client while `startupPreference` flips to
+      // "local", and subsequent session/file actions behave inconsistently.
+      if (!isRemote && options.client() && !wasLocalConnection) {
+        wsDebug("activate:remote->local:reconnect", {
+          id,
+          nextPath: next.path,
+          engine: engine()?.baseUrl ?? null,
+          engineRunning: Boolean(engine()?.running),
+        });
+        options.setSelectedSessionId(null);
+        options.setMessages([]);
+        options.setTodos([]);
+        options.setPendingPermissions([]);
+        options.setSessionStatusById({});
 
-      // If a local host engine is already running (common when bouncing between remote/local),
-      // reuse it instead of restarting to keep switching snappy.
-      let connectedToLocalHost = false;
-      const existingEngine = engine();
-      const runtime = existingEngine?.runtime ?? resolveEngineRuntime();
-      const canReuseHost =
-        isTauriRuntime() &&
-        Boolean(existingEngine?.running && existingEngine.baseUrl);
+        // If a local host engine is already running (common when bouncing between remote/local),
+        // reuse it instead of restarting to keep switching snappy.
+        let connectedToLocalHost = false;
+        const existingEngine = engine();
+        const runtime = existingEngine?.runtime ?? resolveEngineRuntime();
+        const canReuseHost =
+          isTauriRuntime() &&
+          Boolean(existingEngine?.running && existingEngine.baseUrl);
 
-      wsDebug("activate:remote->local:hostReuse", {
-        canReuseHost,
-        runtime,
-        existingEngineBaseUrl: existingEngine?.baseUrl ?? null,
-        existingEngineProjectDir: existingEngine?.projectDir ?? null,
-      });
+        wsDebug("activate:remote->local:hostReuse", {
+          canReuseHost,
+          runtime,
+          existingEngineBaseUrl: existingEngine?.baseUrl ?? null,
+          existingEngineProjectDir: existingEngine?.projectDir ?? null,
+        });
 
-      if (canReuseHost && runtime === "openwork-orchestrator") {
-        try {
-          const reuseStart = Date.now();
-          await orchestratorWorkspaceActivate({
-            workspacePath: next.path,
-            name: next.displayName?.trim() || next.name?.trim() || null,
-          });
-          await activateOpenworkHostWorkspace(next.path);
+        if (canReuseHost && runtime === "openwork-orchestrator") {
+          try {
+            const reuseStart = Date.now();
+            await orchestratorWorkspaceActivate({
+              workspacePath: next.path,
+              name: next.displayName?.trim() || next.name?.trim() || null,
+            });
+            await activateOpenworkHostWorkspace(next.path);
 
-          const nextInfo = await engineInfo();
-          setEngine(nextInfo);
+            const nextInfo = await engineInfo();
+            setEngine(nextInfo);
 
-          const username = nextInfo.opencodeUsername?.trim() ?? "";
-          const password = nextInfo.opencodePassword?.trim() ?? "";
-          const auth = username && password ? { username, password } : undefined;
-          setEngineAuth(auth ?? null);
+            const username = nextInfo.opencodeUsername?.trim() ?? "";
+            const password = nextInfo.opencodePassword?.trim() ?? "";
+            const auth = username && password ? { username, password } : undefined;
+            setEngineAuth(auth ?? null);
 
-          if (nextInfo.baseUrl) {
-            connectedToLocalHost = await connectToServer(
-              nextInfo.baseUrl,
-              nextInfo.projectDir ?? undefined,
-              { reason: "workspace-attach-local" },
-              auth,
-              { navigate: false },
-            );
+            if (nextInfo.baseUrl) {
+              connectedToLocalHost = await connectToServer(
+                nextInfo.baseUrl,
+                nextInfo.projectDir ?? undefined,
+                { reason: "workspace-attach-local" },
+                auth,
+                { navigate: false },
+              );
+            }
+            wsDebug("activate:remote->local:reuseHost:done", {
+              ok: connectedToLocalHost,
+              ms: Date.now() - reuseStart,
+            });
+          } catch {
+            connectedToLocalHost = false;
+            wsDebug("activate:remote->local:reuseHost:error");
           }
-          wsDebug("activate:remote->local:reuseHost:done", {
-            ok: connectedToLocalHost,
-            ms: Date.now() - reuseStart,
-          });
-        } catch {
-          connectedToLocalHost = false;
-          wsDebug("activate:remote->local:reuseHost:error");
+        }
+
+        if (!connectedToLocalHost) {
+          const startHostAt = Date.now();
+          const ok = await startHost({ workspacePath: next.path, navigate: false });
+          wsDebug("activate:remote->local:startHost:done", { ok, ms: Date.now() - startHostAt });
+          if (!ok) {
+            updateWorkspaceConnectionState(id, {
+              status: "error",
+              message: "Failed to start local engine.",
+            });
+            return false;
+          }
         }
       }
 
-      if (!connectedToLocalHost) {
-        const startHostAt = Date.now();
-        const ok = await startHost({ workspacePath: next.path, navigate: false });
-        wsDebug("activate:remote->local:startHost:done", { ok, ms: Date.now() - startHostAt });
-        if (!ok) {
-          updateWorkspaceConnectionState(id, {
-            status: "error",
-            message: "Failed to start local engine.",
-          });
-          return false;
-        }
-      }
-    }
+      // When running locally, restart the engine when workspace changes
+      if (!isRemote && wasLocalConnection && workspaceChanged) {
+        wsDebug("activate:local->local:restartEngine", { id, nextPath: next.path });
+        options.setError(null);
+        options.setBusy(true);
+        options.setBusyLabel("status.restarting_engine");
+        options.setBusyStartedAt(Date.now());
 
-    // When running locally, restart the engine when workspace changes
-    if (!isRemote && wasLocalConnection && workspaceChanged) {
-      wsDebug("activate:local->local:restartEngine", { id, nextPath: next.path });
-      options.setError(null);
-      options.setBusy(true);
-      options.setBusyLabel("status.restarting_engine");
-      options.setBusyStartedAt(Date.now());
+        try {
+          const runtime = resolveEngineRuntime();
+          if (runtime === "openwork-orchestrator") {
+            await orchestratorWorkspaceActivate({
+              workspacePath: next.path,
+              name: next.displayName?.trim() || next.name?.trim() || null,
+            });
+            await activateOpenworkHostWorkspace(next.path);
 
-      try {
-        const runtime = resolveEngineRuntime();
-        if (runtime === "openwork-orchestrator") {
-          await orchestratorWorkspaceActivate({
-            workspacePath: next.path,
-            name: next.displayName?.trim() || next.name?.trim() || null,
-          });
-          await activateOpenworkHostWorkspace(next.path);
+            const newInfo = await engineInfo();
+            setEngine(newInfo);
 
-          const newInfo = await engineInfo();
-          setEngine(newInfo);
-
-          const username = newInfo.opencodeUsername?.trim() ?? "";
-          const password = newInfo.opencodePassword?.trim() ?? "";
-          const auth = username && password ? { username, password } : undefined;
-          setEngineAuth(auth ?? null);
+            const username = newInfo.opencodeUsername?.trim() ?? "";
+            const password = newInfo.opencodePassword?.trim() ?? "";
+            const auth = username && password ? { username, password } : undefined;
+            setEngineAuth(auth ?? null);
 
             if (newInfo.baseUrl) {
               const ok = await connectToServer(
@@ -1118,27 +1119,27 @@ export function createWorkspaceStore(options: {
                 options.setError("Failed to reconnect after worker switch");
               }
             }
-        } else {
-          // Stop the current engine
-          const info = await engineStop();
-          setEngine(info);
+          } else {
+            // Stop the current engine
+            const info = await engineStop();
+            setEngine(info);
 
-          // Start engine with new workspace directory
-          const newInfo = await engineStart(next.path, {
-            preferSidecar: options.engineSource() === "sidecar",
-            opencodeBinPath:
-              options.engineSource() === "custom" ? options.engineCustomBinPath?.().trim() || null : null,
-            runtime,
-            workspacePaths: resolveWorkspacePaths(),
-          });
-          setEngine(newInfo);
+            // Start engine with new workspace directory
+            const newInfo = await engineStart(next.path, {
+              preferSidecar: options.engineSource() === "sidecar",
+              opencodeBinPath:
+                options.engineSource() === "custom" ? options.engineCustomBinPath?.().trim() || null : null,
+              runtime,
+              workspacePaths: resolveWorkspacePaths(),
+            });
+            setEngine(newInfo);
 
-          const username = newInfo.opencodeUsername?.trim() ?? "";
-          const password = newInfo.opencodePassword?.trim() ?? "";
-          const auth = username && password ? { username, password } : undefined;
-          setEngineAuth(auth ?? null);
+            const username = newInfo.opencodeUsername?.trim() ?? "";
+            const password = newInfo.opencodePassword?.trim() ?? "";
+            const auth = username && password ? { username, password } : undefined;
+            setEngineAuth(auth ?? null);
 
-          // Reconnect to server
+            // Reconnect to server
             if (newInfo.baseUrl) {
               const ok = await connectToServer(
                 newInfo.baseUrl,
@@ -1151,16 +1152,16 @@ export function createWorkspaceStore(options: {
                 options.setError("Failed to reconnect after worker switch");
               }
             }
+          }
+        } catch (e) {
+          const message = e instanceof Error ? e.message : safeStringify(e);
+          options.setError(addOpencodeCacheHint(message));
+        } finally {
+          options.setBusy(false);
+          options.setBusyLabel(null);
+          options.setBusyStartedAt(null);
         }
-      } catch (e) {
-        const message = e instanceof Error ? e.message : safeStringify(e);
-        options.setError(addOpencodeCacheHint(message));
-      } finally {
-        options.setBusy(false);
-        options.setBusyLabel(null);
-        options.setBusyStartedAt(null);
       }
-    }
 
       options.refreshSkills({ force: true }).catch(() => undefined);
       options.refreshPlugins().catch(() => undefined);

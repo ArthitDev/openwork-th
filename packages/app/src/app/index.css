@@ -324,3 +324,39 @@ select:disabled {
   .title-bar:not(:focus-within) .traffic-minimize { background: #d6d6d6; }
   .title-bar:not(:focus-within) .traffic-maximize { background: #d6d6d6; }
 }
+
+/* ─── Custom Scrollbar ──────────────────────────────────────── */
+
+/* Thin scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--dls-border);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dls-text-secondary);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dls-border) transparent;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
